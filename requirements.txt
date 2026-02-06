@@ -1,0 +1,15 @@
+# Sistema de Gestión de Fábrica - Dependencias Python
+# Compatible con Python 3.8+
+
+# Framework Web
+Flask==3.0.0
+
+# Base de Datos
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.23
+
+# Generación de PDF
+fpdf2==2.7.6
+
+# Utilidades
+Werkzeug==3.0.1

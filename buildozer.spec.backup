@@ -1,0 +1,127 @@
+[app]
+# Título de la aplicación
+title = Fábrica App
+
+# Nombre del paquete (debe ser único en Play Store)
+package.name = fabricaapp
+
+# Dominio del paquete (inverso)
+package.domain = com.tufabrica
+
+# Versión de la aplicación
+version = 1.0.0
+
+# Descripción
+description = Sistema de gestión de fábrica con control de producción, ventas, gastos y reportes PDF.
+
+# Requisitos de Python
+requirements = python3,flask,flask-sqlalchemy,fpdf2,sqlalchemy
+
+# Icono de la aplicación (opcional)
+# icon.filename = %(source.dir)s/assets/icon.png
+
+# Imagen de inicio/splash (opcional)
+# presplash.filename = %(source.dir)s/assets/presplash.png
+
+# Orientación de la pantalla
+# landscape = horizontal, portrait = vertical, all = ambas
+orientation = landscape
+
+# Servicios (si necesitas procesos en segundo plano)
+services =
+
+# Archivos a incluir
+source.include_exts = py,png,jpg,kv,atlas,ttf,html,css,js,db,spec
+
+# Directorios a incluir
+source.include_patterns = templates/*.html, static/*, database/*
+
+# Directorios a excluir
+source.exclude_dirs = tests, bin, venv, __pycache__, .git, .github
+
+# Archivos a excluir
+source.exclude_patterns = license,images/*/*.jpg
+
+# Versión de la API de Android
+android.api = 33
+android.minapi = 21
+android.ndk = 25b
+android.sdk = 33
+
+# ABI objetivo (arquitecturas)
+android.archs = armeabi-v7a, arm64-v8a
+
+# Permisos de Android
+android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
+
+# Configuración de la aplicación web (Flask)
+android.webview = True
+
+# URL de inicio (Flask corre en localhost)
+android.webview_url = http://localhost:5000
+
+# Permitir contenido mixto (http/https)
+android.allow_mixed_content = True
+
+# Habilitar JavaScript
+android.javascript = True
+
+# Dominios permitidos para WebView
+android.whitelist = localhost,127.0.0.1
+
+# Opciones de compilación
+android.add_aars =
+android.add_assets =
+android.add_compile_options =
+android.add_gradle_repositories =
+android.add_java_sources =
+android.add_jars =
+android.add_libraries =
+android.add_licenses =
+android.add_manifest_application_arguments =
+android.add_manifest_placeholders =
+android.add_resources =
+android.add_src =
+
+# Opciones de firma (para release)
+# android.keystore = ~/.android/debug.keystore
+# android.keystore_path =
+# android.keystore_keyalias = androiddebugkey
+# android.keystore_keyalias_password = android
+
+# Modo de compilación (debug o release)
+android.build_mode = debug
+
+# Log level
+android.log_level = 2
+
+# Presplash color
+android.presplash_color = #0f172a
+
+# Window color
+android.window_color = #0f172a
+
+# Fullscreen
+android.fullscreen = 0
+
+# Wakelock (mantener pantalla encendida)
+android.wakelock = True
+
+# Preservar Python en segundo plano
+android.preserve_python = True
+
+# Configuración de Kivy (no usamos Kivy, usamos WebView)
+fullscreen = 0
+
+[buildozer]
+# Directorio de build
+build_dir = ./.buildozer
+
+# Directorio de binarios
+bin_dir = ./bin
+
+# Log level
+log_level = 2
+
+# Warn on root
+warn_on_root = 1

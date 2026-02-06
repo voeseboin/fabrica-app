@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <title>Fábrica App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            900: '#0a0f1a',
+                            800: '#0f172a',
+                            700: '#1e293b',
+                            600: '#334155',
+                            500: '#475569',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+        }
+        
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        
+        /* Botones táctiles grandes */
+        .btn-touch {
+            min-height: 48px;
+            min-width: 48px;
+        }
+        
+        /* Sidebar activo */
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        /* Cards */
+        .card-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card-hover:active {
+            transform: scale(0.98);
+        }
+        
+        /* Modal */
+        .modal {
+            backdrop-filter: blur(8px);
+        }
+        
+        /* Input táctil */
+        input, select, textarea {
+            font-size: 16px; /* Previene zoom en iOS */
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #1e293b;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Alerta de orientación */
+        #orientation-warning {
+            display: none;
+        }
+        
+        @media (orientation: portrait) {
+            #app-container {
+                display: none !important;
+            }
+            #orientation-warning {
+                display: flex !important;
+            }
+        }
+        
+        /* Animaciones */
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Toast */
+        .toast {
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-100">
+    <!-- Alerta de Orientación Portrait -->
+    <div id="orientation-warning" class="fixed inset-0 bg-dark-900 z-50 flex flex-col items-center justify-center p-8 text-center">
+        <div class="w-24 h-24 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 animate-pulse">
+            <i class="fas fa-mobile-alt text-4xl transform rotate-90"></i>
+        </div>
+        <h2 class="text-2xl font-bold mb-3">Gira tu dispositivo</h2>
+        <p class="text-gray-400 text-lg">Esta aplicación está diseñada para usarse en modo horizontal.</p>
+        <p class="text-gray-500 mt-2">Por favor, rota tu tablet o teléfono.</p>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-20 lg:w-64 bg-dark-800 border-r border-dark-700 flex flex-col flex-shrink-0">
+            <!-- Logo -->
+            <div class="h-16 lg:h-20 border-b border-dark-700 flex items-center justify-center lg:justify-start lg:px-4">
+                <div class="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-industry text-white text-lg lg:text-xl"></i>
+                </div>
+                <div class="hidden lg:block ml-3">
+                    <h1 class="font-bold text-lg">FábricaApp</h1>
+                    <p class="text-xs text-gray-500">Gestión</p>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex-1 py-2 overflow-y-auto">
+                <ul class="space-y-1">
+                    <li>
+                        <button onclick="showSection('dashboard')" id="nav-dashboard" class="nav-item active w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 text-gray-300 hover:text-white">
+                            <i class="fas fa-home text-xl lg:w-8"></i>
+                            <span class="hidden lg:inline">Inicio</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('productos')" id="nav-productos" class="nav-item w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 text-gray-300 hover:text-white">
+                            <i class="fas fa-box text-xl lg:w-8"></i>
+                            <span class="hidden lg:inline">Productos</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('produccion')" id="nav-produccion" class="nav-item w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 text-gray-300 hover:text-white">
+                            <i class="fas fa-cogs text-xl lg:w-8"></i>
+                            <span class="hidden lg:inline">Producción</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('ventas')" id="nav-ventas" class="nav-item w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 text-gray-300 hover:text-white">
+                            <i class="fas fa-shopping-cart text-xl lg:w-8"></i>
+                            <span class="hidden lg:inline">Ventas</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('gastos')" id="nav-gastos" class="nav-item w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 text-gray-300 hover:text-white">
+                            <i class="fas fa-wallet text-xl lg:w-8"></i>
+                            <span class="hidden lg:inline">Gastos</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('reportes')" id="nav-reportes" class="nav-item w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 text-gray-300 hover:text-white">
+                            <i class="fas fa-file-pdf text-xl lg:w-8"></i>
+                            <span class="hidden lg:inline">Reportes</span>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Dinero Total -->
+            <div class="p-2 lg:p-4 border-t border-dark-700">
+                <div class="bg-dark-700 rounded-xl p-2 lg:p-3 text-center lg:text-left">
+                    <p class="text-xs text-gray-500 mb-1">Saldo Total</p>
+                    <p id="dinero-total" class="text-sm lg:text-lg font-bold text-green-400">Gs. 0</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <!-- Header -->
+            <header class="h-16 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+                <h2 id="page-title" class="text-lg lg:text-xl font-semibold">Dashboard</h2>
+                <div class="flex items-center gap-3">
+                    <span id="current-date" class="text-sm text-gray-500 hidden sm:inline"></span>
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-sm"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div id="content-area" class="flex-1 overflow-auto p-4 lg:p-6">
+                <!-- Loading -->
+                <div id="loading" class="flex items-center justify-center h-full">
+                    <div class="spinner"></div>
+                </div>
+
+                <!-- Dashboard Section -->
+                <section id="section-dashboard" class="hidden fade-in">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4 lg:mb-6">
+                        <div class="bg-dark-800 rounded-xl p-3 lg:p-4 border border-dark-700 card-hover">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-8 h-8 lg:w-10 lg:h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-money-bill-wave text-green-400 text-sm lg:text-base"></i>
+                                </div>
+                                <span class="text-xs text-gray-500 hidden sm:inline">Saldo</span>
+                            </div>
+                            <h3 id="stat-dinero" class="text-base lg:text-xl font-bold text-green-400">Gs. 0</h3>
+                        </div>
+                        <div class="bg-dark-800 rounded-xl p-3 lg:p-4 border border-dark-700 card-hover">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-8 h-8 lg:w-10 lg:h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-blue-400 text-sm lg:text-base"></i>
+                                </div>
+                                <span class="text-xs text-gray-500 hidden sm:inline">Productos</span>
+                            </div>
+                            <h3 id="stat-productos" class="text-base lg:text-xl font-bold text-blue-400">0</h3>
+                        </div>
+                        <div class="bg-dark-800 rounded-xl p-3 lg:p-4 border border-dark-700 card-hover">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-8 h-8 lg:w-10 lg:h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-cogs text-purple-400 text-sm lg:text-base"></i>
+                                </div>
+                                <span class="text-xs text-gray-500 hidden sm:inline">Producido</span>
+                            </div>
+                            <h3 id="stat-produccion" class="text-base lg:text-xl font-bold text-purple-400">0</h3>
+                        </div>
+                        <div class="bg-dark-800 rounded-xl p-3 lg:p-4 border border-dark-700 card-hover">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-8 h-8 lg:w-10 lg:h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-shopping-cart text-orange-400 text-sm lg:text-base"></i>
+                                </div>
+                                <span class="text-xs text-gray-500 hidden sm:inline">Vendido</span>
+                            </div>
+                            <h3 id="stat-ventas" class="text-base lg:text-xl font-bold text-orange-400">0</h3>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Summary -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4 mb-4 lg:mb-6">
+                        <div class="bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-xl p-3 lg:p-4 border border-blue-500/30">
+                            <h4 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                                <i class="fas fa-chart-line text-blue-400"></i>
+                                Ventas del Mes
+                            </h4>
+                            <div id="mes-ventas" class="text-xl lg:text-2xl font-bold">Gs. 0</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-red-600/20 to-orange-600/20 rounded-xl p-3 lg:p-4 border border-red-500/30">
+                            <h4 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                                <i class="fas fa-wallet text-red-400"></i>
+                                Gastos del Mes
+                            </h4>
+                            <div id="mes-gastos" class="text-xl lg:text-2xl font-bold">Gs. 0</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-600/20 to-teal-600/20 rounded-xl p-3 lg:p-4 border border-green-500/30">
+                            <h4 class="text-sm font-semibold mb-2 flex items-center gap-2">
+                                <i class="fas fa-balance-scale text-green-400"></i>
+                                Balance del Mes
+                            </h4>
+                            <div id="mes-balance" class="text-xl lg:text-2xl font-bold">Gs. 0</div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts & Activity -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
+                        <!-- Low Stock -->
+                        <div class="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
+                            <div class="px-3 lg:px-4 py-2 lg:py-3 border-b border-dark-700 bg-red-500/10">
+                                <h4 class="font-semibold flex items-center gap-2 text-red-400 text-sm">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Stock Bajo
+                                </h4>
+                            </div>
+                            <div id="low-stock-list" class="p-3 lg:p-4 max-h-48 overflow-y-auto">
+                                <!-- Dynamic content -->
+                            </div>
+                        </div>
+
+                        <!-- Recent Sales -->
+                        <div class="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
+                            <div class="px-3 lg:px-4 py-2 lg:py-3 border-b border-dark-700 flex items-center justify-between">
+                                <h4 class="font-semibold flex items-center gap-2 text-sm">
+                                    <i class="fas fa-shopping-cart text-blue-400"></i>
+                                    Últimas Ventas
+                                </h4>
+                            </div>
+                            <div id="recent-sales-list" class="p-3 lg:p-4 max-h-48 overflow-y-auto">
+                                <!-- Dynamic content -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="mt-4 lg:mt-6 flex flex-wrap gap-2 lg:gap-3">
+                        <button onclick="openModal('modal-venta')" class="btn-touch px-4 lg:px-6 py-2 lg:py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors flex items-center gap-2 text-sm lg:text-base">
+                            <i class="fas fa-plus"></i>
+                            <span class="hidden sm:inline">Nueva Venta</span>
+                            <span class="sm:hidden">Venta</span>
+                        </button>
+                        <button onclick="openModal('modal-produccion')" class="btn-touch px-4 lg:px-6 py-2 lg:py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-medium transition-colors flex items-center gap-2 text-sm lg:text-base">
+                            <i class="fas fa-plus"></i>
+                            <span class="hidden sm:inline">Producción</span>
+                            <span class="sm:hidden">Prod.</span>
+                        </button>
+                        <button onclick="openModal('modal-gasto')" class="btn-touch px-4 lg:px-6 py-2 lg:py-3 bg-red-600 hover:bg-red-700 rounded-xl font-medium transition-colors flex items-center gap-2 text-sm lg:text-base">
+                            <i class="fas fa-plus"></i>
+                            <span class="hidden sm:inline">Gasto</span>
+                            <span class="sm:hidden">Gasto</span>
+                        </button>
+                        <button onclick="showSection('reportes')" class="btn-touch px-4 lg:px-6 py-2 lg:py-3 bg-green-600 hover:bg-green-700 rounded-xl font-medium transition-colors flex items-center gap-2 text-sm lg:text-base">
+                            <i class="fas fa-file-pdf"></i>
+                            <span class="hidden sm:inline">Reporte</span>
+                            <span class="sm:hidden">PDF</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Productos Section -->
+                <section id="section-productos" class="hidden fade-in">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div class="relative flex-1 max-w-xs">
+                            <input type="text" id="search-producto" placeholder="Buscar..." 
+                                   class="w-full bg-dark-800 border border-dark-700 rounded-xl pl-10 pr-4 py-2 focus:outline-none focus:border-blue-500">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                        </div>
+                        <button onclick="openModal('modal-producto')" class="btn-touch px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span class="hidden sm:inline">Nuevo</span>
+                        </button>
+                    </div>
+
+                    <div id="productos-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                        <!-- Dynamic content -->
+                    </div>
+                </section>
+
+                <!-- Producción Section -->
+                <section id="section-produccion" class="hidden fade-in">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-gray-400 text-sm hidden sm:inline">Registro de producción mensual</p>
+                        <button onclick="openModal('modal-produccion')" class="btn-touch px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl font-medium transition-colors flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Nueva</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-dark-700">
+                                    <tr>
+                                        <th class="px-3 lg:px-4 py-3 text-left">Producto</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Cant.</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Período</th>
+                                        <th class="px-3 lg:px-4 py-3 text-right">Costo Unit.</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="produccion-table" class="divide-y divide-dark-700">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ventas Section -->
+                <section id="section-ventas" class="hidden fade-in">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-gray-400 text-sm hidden sm:inline">Historial de ventas</p>
+                        <button onclick="openModal('modal-venta')" class="btn-touch px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Nueva Venta</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-dark-700">
+                                    <tr>
+                                        <th class="px-3 lg:px-4 py-3 text-left">Fecha</th>
+                                        <th class="px-3 lg:px-4 py-3 text-left">Producto</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Cant.</th>
+                                        <th class="px-3 lg:px-4 py-3 text-right">Total</th>
+                                        <th class="px-3 lg:px-4 py-3 text-right">Ganancia</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ventas-table" class="divide-y divide-dark-700">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Gastos Section -->
+                <section id="section-gastos" class="hidden fade-in">
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-dark-800 rounded-xl p-3 border border-dark-700 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Fábrica</p>
+                            <p id="gasto-fabrica" class="text-sm lg:text-base font-bold text-orange-400">Gs. 0</p>
+                        </div>
+                        <div class="bg-dark-800 rounded-xl p-3 border border-dark-700 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Personal</p>
+                            <p id="gasto-personal" class="text-sm lg:text-base font-bold text-purple-400">Gs. 0</p>
+                        </div>
+                        <div class="bg-dark-800 rounded-xl p-3 border border-dark-700 text-center">
+                            <p class="text-xs text-gray-500 mb-1">Total</p>
+                            <p id="gasto-total" class="text-sm lg:text-base font-bold text-red-400">Gs. 0</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-gray-400 text-sm hidden sm:inline">Registro de gastos</p>
+                        <button onclick="openModal('modal-gasto')" class="btn-touch px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl font-medium transition-colors flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Nuevo Gasto</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-dark-700">
+                                    <tr>
+                                        <th class="px-3 lg:px-4 py-3 text-left">Fecha</th>
+                                        <th class="px-3 lg:px-4 py-3 text-left">Concepto</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Tipo</th>
+                                        <th class="px-3 lg:px-4 py-3 text-right">Monto</th>
+                                        <th class="px-3 lg:px-4 py-3 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gastos-table" class="divide-y divide-dark-700">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reportes Section -->
+                <section id="section-reportes" class="hidden fade-in">
+                    <div class="max-w-2xl mx-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <!-- General Report -->
+                            <div class="bg-dark-800 rounded-xl border border-dark-700 p-4 lg:p-6 card-hover">
+                                <div class="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-file-alt text-white text-xl"></i>
+                                </div>
+                                <h3 class="font-bold text-base lg:text-lg mb-2">Reporte General</h3>
+                                <p class="text-gray-400 text-xs lg:text-sm mb-4">Todas las ventas y gastos registrados.</p>
+                                <button onclick="generarYCompartirPDF()" class="btn-touch w-full py-2 lg:py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-share-alt"></i>
+                                    <span>Generar y Compartir</span>
+                                </button>
+                            </div>
+
+                            <!-- Monthly Report -->
+                            <div class="bg-dark-800 rounded-xl border border-dark-700 p-4 lg:p-6 card-hover md:col-span-2">
+                                <div class="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center mb-3">
+                                    <i class="fas fa-calendar-day text-white text-xl"></i>
+                                </div>
+                                <h3 class="font-bold text-base lg:text-lg mb-2">Reporte Mensual</h3>
+                                <p class="text-gray-400 text-xs lg:text-sm mb-4">Filtra por mes y año específicos.</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <select id="report-mes" class="flex-1 min-w-[120px] bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 text-sm">
+                                        <option value="1">Enero</option>
+                                        <option value="2">Febrero</option>
+                                        <option value="3">Marzo</option>
+                                        <option value="4">Abril</option>
+                                        <option value="5">Mayo</option>
+                                        <option value="6">Junio</option>
+                                        <option value="7">Julio</option>
+                                        <option value="8">Agosto</option>
+                                        <option value="9">Septiembre</option>
+                                        <option value="10">Octubre</option>
+                                        <option value="11">Noviembre</option>
+                                        <option value="12">Diciembre</option>
+                                    </select>
+                                    <select id="report-anio" class="flex-1 min-w-[80px] bg-dark-700 border border-dark-600 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 text-sm">
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2026" selected>2026</option>
+                                    </select>
+                                    <button onclick="generarYCompartirPDFMensual()" class="btn-touch px-4 lg:px-6 py-2 lg:py-3 bg-orange-600 hover:bg-orange-700 rounded-xl font-medium transition-colors flex items-center gap-2">
+                                        <i class="fas fa-share-alt"></i>
+                                        <span>Compartir</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info -->
+                        <div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-info-circle text-blue-400 text-lg mt-0.5"></i>
+                                <div>
+                                    <h4 class="font-semibold text-blue-400 mb-1 text-sm">Compartir PDF</h4>
+                                    <p class="text-gray-300 text-xs leading-relaxed">
+                                        Al generar el reporte, se abrirá el menú de compartir de Android 
+                                        para enviar por WhatsApp, Gmail, Drive, etc.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Modal Producto -->
+    <div id="modal-producto" class="modal fixed inset-0 bg-black/70 hidden items-center justify-center z-40 p-4">
+        <div class="bg-dark-800 rounded-2xl border border-dark-700 w-full max-w-md">
+            <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-dark-700 flex items-center justify-between">
+                <h3 class="font-semibold text-base lg:text-lg">Nuevo Producto</h3>
+                <button onclick="closeModal('modal-producto')" class="text-gray-400 hover:text-white btn-touch">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="form-producto" class="p-4 lg:p-6 space-y-3 lg:space-y-4">
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Nombre</label>
+                    <input type="text" name="nombre" required 
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs lg:text-sm text-gray-400 mb-1">Precio Mayorista</label>
+                        <input type="number" name="precio_mayorista" min="0" 
+                               class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs lg:text-sm text-gray-400 mb-1">Precio Minorista</label>
+                        <input type="number" name="precio_minorista" min="0" 
+                               class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Stock Inicial</label>
+                    <input type="number" name="stock_inicial" min="0" value="0"
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal('modal-producto')" 
+                            class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors text-sm">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors text-sm">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Producción -->
+    <div id="modal-produccion" class="modal fixed inset-0 bg-black/70 hidden items-center justify-center z-40 p-4">
+        <div class="bg-dark-800 rounded-2xl border border-dark-700 w-full max-w-md">
+            <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-dark-700 flex items-center justify-between">
+                <h3 class="font-semibold text-base lg:text-lg">Nueva Producción</h3>
+                <button onclick="closeModal('modal-produccion')" class="text-gray-400 hover:text-white btn-touch">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="form-produccion" class="p-4 lg:p-6 space-y-3 lg:space-y-4">
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Producto</label>
+                    <select name="producto_id" required 
+                            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-purple-500">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Cantidad</label>
+                    <input type="number" name="cantidad" min="1" required 
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs lg:text-sm text-gray-400 mb-1">Mes</label>
+                        <select name="mes" required 
+                                class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-purple-500">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs lg:text-sm text-gray-400 mb-1">Año</label>
+                        <input type="number" name="anio" value="2026" min="2020" required 
+                               class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-purple-500">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal('modal-produccion')" 
+                            class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors text-sm">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-medium transition-colors text-sm">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Venta -->
+    <div id="modal-venta" class="modal fixed inset-0 bg-black/70 hidden items-center justify-center z-40 p-4">
+        <div class="bg-dark-800 rounded-2xl border border-dark-700 w-full max-w-md">
+            <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-dark-700 flex items-center justify-between">
+                <h3 class="font-semibold text-base lg:text-lg">Nueva Venta</h3>
+                <button onclick="closeModal('modal-venta')" class="text-gray-400 hover:text-white btn-touch">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="form-venta" class="p-4 lg:p-6 space-y-3 lg:space-y-4">
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Producto</label>
+                    <select name="producto_id" id="venta-producto" required 
+                            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Lote de Producción</label>
+                    <select name="produccion_id" id="venta-produccion" required disabled
+                            class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500 disabled:opacity-50">
+                        <option value="">Primero selecciona producto...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Cantidad</label>
+                    <input type="number" name="cantidad" id="venta-cantidad" min="1" required 
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                    <p id="stock-disponible" class="text-xs text-gray-500 mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Tipo de Precio</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="tipo_precio" value="mayorista" class="hidden peer">
+                            <div class="bg-dark-700 border-2 border-dark-600 rounded-xl p-2 lg:p-3 text-center peer-checked:border-blue-500 peer-checked:bg-blue-500/10 transition-all">
+                                <p class="text-xs lg:text-sm font-medium">Mayorista</p>
+                                <p id="precio-mayorista" class="text-xs text-blue-400">Gs. 0</p>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="tipo_precio" value="minorista" class="hidden peer" checked>
+                            <div class="bg-dark-700 border-2 border-dark-600 rounded-xl p-2 lg:p-3 text-center peer-checked:border-purple-500 peer-checked:bg-purple-500/10 transition-all">
+                                <p class="text-xs lg:text-sm font-medium">Minorista</p>
+                                <p id="precio-minorista" class="text-xs text-purple-400">Gs. 0</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Descuento (Gs.)</label>
+                    <input type="number" name="descuento" min="0" value="0"
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal('modal-venta')" 
+                            class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors text-sm">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-medium transition-colors text-sm">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Gasto -->
+    <div id="modal-gasto" class="modal fixed inset-0 bg-black/70 hidden items-center justify-center z-40 p-4">
+        <div class="bg-dark-800 rounded-2xl border border-dark-700 w-full max-w-md">
+            <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-dark-700 flex items-center justify-between">
+                <h3 class="font-semibold text-base lg:text-lg">Nuevo Gasto</h3>
+                <button onclick="closeModal('modal-gasto')" class="text-gray-400 hover:text-white btn-touch">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <form id="form-gasto" class="p-4 lg:p-6 space-y-3 lg:space-y-4">
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Concepto</label>
+                    <input type="text" name="concepto" required placeholder="Ej: Alquiler, Materia prima..."
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-red-500">
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Monto (Gs.)</label>
+                    <input type="number" name="monto" min="1" required 
+                           class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-red-500">
+                </div>
+                <div>
+                    <label class="block text-xs lg:text-sm text-gray-400 mb-1">Tipo</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="tipo" value="Fabrica" class="hidden peer" checked>
+                            <div class="bg-dark-700 border-2 border-dark-600 rounded-xl p-2 lg:p-3 text-center peer-checked:border-orange-500 peer-checked:bg-orange-500/10 transition-all">
+                                <i class="fas fa-industry text-orange-400 mb-1"></i>
+                                <p class="text-xs font-medium">Fábrica</p>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="tipo" value="Personal" class="hidden peer">
+                            <div class="bg-dark-700 border-2 border-dark-600 rounded-xl p-2 lg:p-3 text-center peer-checked:border-purple-500 peer-checked:bg-purple-500/10 transition-all">
+                                <i class="fas fa-user text-purple-400 mb-1"></i>
+                                <p class="text-xs font-medium">Personal</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs lg:text-sm text-gray-400 mb-1">Mes</label>
+                        <select name="mes" required 
+                                class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-red-500">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs lg:text-sm text-gray-400 mb-1">Año</label>
+                        <input type="number" name="anio" value="2026" min="2020" required 
+                               class="w-full bg-dark-700 border border-dark-600 rounded-xl px-3 lg:px-4 py-2 focus:outline-none focus:border-red-500">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal('modal-gasto')" 
+                            class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-dark-700 hover:bg-dark-600 rounded-xl transition-colors text-sm">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 btn-touch px-4 py-2 lg:py-3 bg-red-600 hover:bg-red-700 rounded-xl font-medium transition-colors text-sm">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- JavaScript -->
+    <script>
+        // ==========================================
+        // VARIABLES GLOBALES
+        // ==========================================
+        let productos = [];
+        let producciones = [];
+        let ventas = [];
+        let gastos = [];
+        let currentSection = 'dashboard';
+
+        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        // ==========================================
+        // UTILIDADES
+        // ==========================================
+        function formatGs(valor) {
+            return 'Gs. ' + valor.toLocaleString('es-PY');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast px-4 py-3 rounded-xl text-sm font-medium ${
+                type === 'success' ? 'bg-green-500/20 border border-green-500/50 text-green-400' :
+                'bg-red-500/20 border border-red-500/50 text-red-400'
+            }`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('flex');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.getElementById(id).classList.remove('flex');
+        }
+
+        function showSection(section) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            // Mostrar sección seleccionada
+            document.getElementById(`section-${section}`).classList.remove('hidden');
+            document.getElementById(`nav-${section}`).classList.add('active');
+            
+            // Actualizar título
+            const titles = {
+                'dashboard': 'Dashboard',
+                'productos': 'Productos',
+                'produccion': 'Producción',
+                'ventas': 'Ventas',
+                'gastos': 'Gastos',
+                'reportes': 'Reportes'
+            };
+            document.getElementById('page-title').textContent = titles[section];
+            
+            currentSection = section;
+            
+            // Cargar datos específicos
+            if (section === 'productos') loadProductos();
+            if (section === 'produccion') loadProduccion();
+            if (section === 'ventas') loadVentas();
+            if (section === 'gastos') loadGastos();
+        }
+
+        // ==========================================
+        // API CALLS
+        // ==========================================
+        async function apiCall(url, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (data) options.body = JSON.stringify(data);
+            
+            try {
+                const response = await fetch(url, options);
+                return await response.json();
+            } catch (error) {
+                showToast('Error de conexión', 'error');
+                throw error;
+            }
+        }
+
+        // ==========================================
+        // DASHBOARD
+        // ==========================================
+        async function loadDashboard() {
+            const data = await apiCall('/api/dashboard');
+            
+            // Stats
+            document.getElementById('stat-dinero').textContent = formatGs(data.stats.dinero_total);
+            document.getElementById('stat-productos').textContent = data.stats.total_productos;
+            document.getElementById('stat-produccion').textContent = data.stats.total_produccion;
+            document.getElementById('stat-ventas').textContent = data.stats.total_ventas;
+            document.getElementById('dinero-total').textContent = formatGs(data.stats.dinero_total);
+            
+            // Monthly totals
+            document.getElementById('mes-ventas').textContent = formatGs(data.stats.totales_mes.ventas);
+            document.getElementById('mes-gastos').textContent = formatGs(data.stats.totales_mes.gastos_total);
+            document.getElementById('mes-balance').textContent = formatGs(data.stats.totales_mes.balance);
+            
+            // Low stock
+            const lowStockList = document.getElementById('low-stock-list');
+            if (data.productos_bajo_stock.length > 0) {
+                lowStockList.innerHTML = data.productos_bajo_stock.map(p => `
+                    <div class="flex items-center justify-between p-2 bg-dark-700 rounded-lg mb-2">
+                        <span class="text-sm">${p.nombre}</span>
+                        <span class="text-red-400 font-bold text-sm">${p.stock_actual} u.</span>
+                    </div>
+                `).join('');
+            } else {
+                lowStockList.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">Todo bien ✓</p>';
+            }
+            
+            // Recent sales
+            const recentSales = document.getElementById('recent-sales-list');
+            if (data.ultimas_ventas.length > 0) {
+                recentSales.innerHTML = data.ultimas_ventas.map(v => `
+                    <div class="flex items-center justify-between p-2 bg-dark-700 rounded-lg mb-2">
+                        <div>
+                            <p class="text-sm font-medium">${v.producto_nombre}</p>
+                            <p class="text-xs text-gray-500">${new Date(v.fecha).toLocaleDateString()}</p>
+                        </div>
+                        <span class="text-green-400 font-bold text-sm">${formatGs((v.precio_aplicado * v.cantidad) - v.descuento)}</span>
+                    </div>
+                `).join('');
+            } else {
+                recentSales.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm">Sin ventas</p>';
+            }
+            
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        // ==========================================
+        // PRODUCTOS
+        // ==========================================
+        async function loadProductos() {
+            const data = await apiCall('/api/productos');
+            productos = data;
+            
+            const grid = document.getElementById('productos-grid');
+            if (data.length > 0) {
+                grid.innerHTML = data.map(p => `
+                    <div class="bg-dark-800 rounded-xl p-3 border border-dark-700 card-hover">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-box text-white"></i>
+                            </div>
+                            <button onclick="deleteProducto(${p.id})" class="text-gray-500 hover:text-red-400 btn-touch">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                        <h3 class="font-bold text-sm mb-1 truncate">${p.nombre}</h3>
+                        <p class="text-xs text-gray-500">Stock: <span class="${p.stock_actual < 10 ? 'text-red-400' : 'text-green-400'} font-bold">${p.stock_actual}</span></p>
+                        <p class="text-xs text-blue-400">M: ${formatGs(p.precio_mayorista)}</p>
+                        <p class="text-xs text-purple-400">m: ${formatGs(p.precio_minorista)}</p>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No hay productos</div>';
+            }
+        }
+
+        document.getElementById('form-producto')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                nombre: formData.get('nombre'),
+                precio_mayorista: parseInt(formData.get('precio_mayorista') || 0),
+                precio_minorista: parseInt(formData.get('precio_minorista') || 0),
+                stock_inicial: parseInt(formData.get('stock_inicial') || 0)
+            };
+            
+            const result = await apiCall('/api/productos', 'POST', data);
+            if (result.success) {
+                showToast('Producto creado');
+                closeModal('modal-producto');
+                e.target.reset();
+                loadProductos();
+                loadDashboard();
+            }
+        });
+
+        async function deleteProducto(id) {
+            if (!confirm('¿Eliminar este producto?')) return;
+            const result = await apiCall(`/api/productos/${id}`, 'DELETE');
+            if (result.success) {
+                showToast('Producto eliminado');
+                loadProductos();
+            } else {
+                showToast(result.error, 'error');
+            }
+        }
+
+        // ==========================================
+        // PRODUCCIÓN
+        // ==========================================
+        async function loadProduccion() {
+            const data = await apiCall('/api/produccion');
+            producciones = data;
+            
+            const tbody = document.getElementById('produccion-table');
+            if (data.length > 0) {
+                tbody.innerHTML = data.map(p => `
+                    <tr class="hover:bg-dark-700/50">
+                        <td class="px-3 lg:px-4 py-2">${p.producto_nombre}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center">${p.cantidad}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center text-gray-400">${meses[p.mes-1]} ${p.anio}</td>
+                        <td class="px-3 lg:px-4 py-2 text-right text-green-400">${formatGs(p.costo_unitario_calculado)}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center">
+                            <button onclick="deleteProduccion(${p.id})" class="text-red-400 hover:text-red-300 btn-touch">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay producción registrada</td></tr>';
+            }
+            
+            // Llenar select de productos
+            const select = document.querySelector('#form-produccion select[name="producto_id"]');
+            select.innerHTML = '<option value="">Seleccionar...</option>' + 
+                productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+            
+            // Llenar select de meses
+            const mesSelect = document.querySelector('#form-produccion select[name="mes"]');
+            const mesActual = new Date().getMonth() + 1;
+            mesSelect.innerHTML = meses.map((m, i) => 
+                `<option value="${i+1}" ${i+1 === mesActual ? 'selected' : ''}>${m}</option>`
+            ).join('');
+        }
+
+        document.getElementById('form-produccion')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                producto_id: parseInt(formData.get('producto_id')),
+                cantidad: parseInt(formData.get('cantidad')),
+                mes: parseInt(formData.get('mes')),
+                anio: parseInt(formData.get('anio'))
+            };
+            
+            const result = await apiCall('/api/produccion', 'POST', data);
+            if (result.success) {
+                showToast(`Producción registrada. Costo: ${formatGs(result.costo_unitario)}`);
+                closeModal('modal-produccion');
+                e.target.reset();
+                loadProduccion();
+                loadDashboard();
+            }
+        });
+
+        async function deleteProduccion(id) {
+            if (!confirm('¿Eliminar esta producción?')) return;
+            const result = await apiCall(`/api/produccion/${id}`, 'DELETE');
+            if (result.success) {
+                showToast('Producción eliminada');
+                loadProduccion();
+            } else {
+                showToast(result.error, 'error');
+            }
+        }
+
+        // ==========================================
+        // VENTAS
+        // ==========================================
+        async function loadVentas() {
+            const data = await apiCall('/api/ventas');
+            ventas = data;
+            
+            const tbody = document.getElementById('ventas-table');
+            if (data.length > 0) {
+                tbody.innerHTML = data.map(v => `
+                    <tr class="hover:bg-dark-700/50">
+                        <td class="px-3 lg:px-4 py-2 text-gray-400">${new Date(v.fecha).toLocaleDateString()}</td>
+                        <td class="px-3 lg:px-4 py-2">${v.producto_nombre}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center">${v.cantidad}</td>
+                        <td class="px-3 lg:px-4 py-2 text-right">${formatGs((v.precio_aplicado * v.cantidad) - v.descuento)}</td>
+                        <td class="px-3 lg:px-4 py-2 text-right ${v.ganancia_real >= 0 ? 'text-green-400' : 'text-red-400'}">${formatGs(v.ganancia_real)}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center">
+                            <button onclick="deleteVenta(${v.id})" class="text-red-400 hover:text-red-300 btn-touch">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-500">No hay ventas registradas</td></tr>';
+            }
+            
+            // Llenar select de productos
+            const select = document.getElementById('venta-producto');
+            select.innerHTML = '<option value="">Seleccionar...</option>' + 
+                productos.filter(p => p.stock_actual > 0).map(p => 
+                    `<option value="${p.id}" data-mayorista="${p.precio_mayorista}" data-minorista="${p.precio_minorista}">${p.nombre} (Stock: ${p.stock_actual})</option>`
+                ).join('');
+        }
+
+        // Cambio de producto en venta
+        document.getElementById('venta-producto')?.addEventListener('change', async (e) => {
+            const productoId = e.target.value;
+            const prodSelect = document.getElementById('venta-produccion');
+            
+            if (!productoId) {
+                prodSelect.innerHTML = '<option value="">Primero selecciona producto...</option>';
+                prodSelect.disabled = true;
+                return;
+            }
+            
+            // Actualizar precios
+            const option = e.target.options[e.target.selectedIndex];
+            document.getElementById('precio-mayorista').textContent = formatGs(option.dataset.mayorista);
+            document.getElementById('precio-minorista').textContent = formatGs(option.dataset.minorista);
+            
+            // Cargar producciones disponibles
+            const producciones = await apiCall(`/api/productos/${productoId}/producciones-disponibles`);
+            
+            if (producciones.length === 0) {
+                prodSelect.innerHTML = '<option value="">Sin stock disponible</option>';
+                document.getElementById('stock-disponible').textContent = 'No hay lotes con stock';
+            } else {
+                prodSelect.innerHTML = '<option value="">Seleccionar lote...</option>' + 
+                    producciones.map(p => 
+                        `<option value="${p.id}" data-disponible="${p.disponible}">${meses[p.mes-1]} ${p.anio} - ${p.disponible} u. (Costo: ${formatGs(p.costo_unitario)})</option>`
+                    ).join('');
+                document.getElementById('stock-disponible').textContent = '';
+            }
+            prodSelect.disabled = false;
+        });
+
+        // Cambio de lote
+        document.getElementById('venta-produccion')?.addEventListener('change', (e) => {
+            const disponible = e.target.options[e.target.selectedIndex].dataset.disponible;
+            if (disponible) {
+                document.getElementById('stock-disponible').textContent = `Disponible: ${disponible} unidades`;
+                document.getElementById('venta-cantidad').max = disponible;
+            }
+        });
+
+        document.getElementById('form-venta')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                producto_id: parseInt(formData.get('producto_id')),
+                produccion_id: parseInt(formData.get('produccion_id')),
+                cantidad: parseInt(formData.get('cantidad')),
+                tipo_precio: formData.get('tipo_precio'),
+                descuento: parseInt(formData.get('descuento') || 0)
+            };
+            
+            const result = await apiCall('/api/ventas', 'POST', data);
+            if (result.success) {
+                showToast(`Venta registrada. Ganancia: ${formatGs(result.ganancia_real)}`);
+                closeModal('modal-venta');
+                e.target.reset();
+                document.getElementById('venta-produccion').disabled = true;
+                loadVentas();
+                loadDashboard();
+            } else {
+                showToast(result.error, 'error');
+            }
+        });
+
+        async function deleteVenta(id) {
+            if (!confirm('¿Eliminar esta venta?')) return;
+            const result = await apiCall(`/api/ventas/${id}`, 'DELETE');
+            if (result.success) {
+                showToast('Venta eliminada');
+                loadVentas();
+                loadDashboard();
+            }
+        }
+
+        // ==========================================
+        // GASTOS
+        // ==========================================
+        async function loadGastos() {
+            const [gastosData, totales] = await Promise.all([
+                apiCall('/api/gastos'),
+                apiCall('/api/gastos/totales')
+            ]);
+            
+            gastos = gastosData;
+            
+            // Totales
+            document.getElementById('gasto-fabrica').textContent = formatGs(totales.fabrica);
+            document.getElementById('gasto-personal').textContent = formatGs(totales.personal);
+            document.getElementById('gasto-total').textContent = formatGs(totales.total);
+            
+            // Tabla
+            const tbody = document.getElementById('gastos-table');
+            if (gastosData.length > 0) {
+                tbody.innerHTML = gastosData.map(g => `
+                    <tr class="hover:bg-dark-700/50">
+                        <td class="px-3 lg:px-4 py-2 text-gray-400">${new Date(g.fecha).toLocaleDateString()}</td>
+                        <td class="px-3 lg:px-4 py-2">${g.concepto}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center">
+                            <span class="px-2 py-1 rounded text-xs ${g.tipo === 'Fabrica' ? 'bg-orange-500/20 text-orange-400' : 'bg-purple-500/20 text-purple-400'}">${g.tipo}</span>
+                        </td>
+                        <td class="px-3 lg:px-4 py-2 text-right text-red-400">${formatGs(g.monto)}</td>
+                        <td class="px-3 lg:px-4 py-2 text-center">
+                            <button onclick="deleteGasto(${g.id})" class="text-red-400 hover:text-red-300 btn-touch">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">No hay gastos registrados</td></tr>';
+            }
+            
+            // Llenar select de meses
+            const mesSelect = document.querySelector('#form-gasto select[name="mes"]');
+            const mesActual = new Date().getMonth() + 1;
+            mesSelect.innerHTML = meses.map((m, i) => 
+                `<option value="${i+1}" ${i+1 === mesActual ? 'selected' : ''}>${m}</option>`
+            ).join('');
+        }
+
+        document.getElementById('form-gasto')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                concepto: formData.get('concepto'),
+                monto: parseInt(formData.get('monto')),
+                tipo: formData.get('tipo'),
+                mes: parseInt(formData.get('mes')),
+                anio: parseInt(formData.get('anio'))
+            };
+            
+            const result = await apiCall('/api/gastos', 'POST', data);
+            if (result.success) {
+                showToast('Gasto registrado');
+                closeModal('modal-gasto');
+                e.target.reset();
+                loadGastos();
+                loadDashboard();
+            }
+        });
+
+        async function deleteGasto(id) {
+            if (!confirm('¿Eliminar este gasto?')) return;
+            const result = await apiCall(`/api/gastos/${id}`, 'DELETE');
+            if (result.success) {
+                showToast('Gasto eliminado');
+                loadGastos();
+                loadDashboard();
+            }
+        }
+
+        // ==========================================
+        // REPORTES Y PDF - WEB SHARE API
+        // ==========================================
+        async function generarYCompartirPDF() {
+            try {
+                showToast('Generando PDF...');
+                
+                // Descargar PDF
+                const response = await fetch('/api/reportes/pdf');
+                const blob = await response.blob();
+                
+                // Crear archivo
+                const file = new File([blob], 'reporte_general.pdf', { type: 'application/pdf' });
+                
+                // Usar Web Share API
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Reporte de Fábrica',
+                        text: 'Reporte general del sistema de gestión'
+                    });
+                    showToast('PDF compartido');
+                } else {
+                    // Fallback: descargar
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'reporte_general.pdf';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('PDF descargado');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error al generar PDF', 'error');
+            }
+        }
+
+        async function generarYCompartirPDFMensual() {
+            try {
+                const mes = document.getElementById('report-mes').value;
+                const anio = document.getElementById('report-anio').value;
+                
+                showToast('Generando PDF...');
+                
+                const response = await fetch(`/api/reportes/pdf?mes=${mes}&anio=${anio}`);
+                const blob = await response.blob();
+                
+                const mesNombre = meses[mes - 1];
+                const file = new File([blob], `reporte_${mesNombre}_${anio}.pdf`, { type: 'application/pdf' });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Reporte ${mesNombre} ${anio}`,
+                        text: 'Reporte mensual del sistema de gestión'
+                    });
+                    showToast('PDF compartido');
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `reporte_${mesNombre}_${anio}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('PDF descargado');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error al generar PDF', 'error');
+            }
+        }
+
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Fecha actual
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('es-PY');
+            
+            // Cargar dashboard
+            loadDashboard();
+            
+            // Cerrar modales al hacer clic fuera
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal(modal.id);
+                });
+            });
+            
+            // Buscar productos
+            document.getElementById('search-producto')?.addEventListener('input', (e) => {
+                const search = e.target.value.toLowerCase();
+                document.querySelectorAll('#productos-grid > div').forEach(card => {
+                    const nombre = card.querySelector('h3')?.textContent.toLowerCase() || '';
+                    card.style.display = nombre.includes(search) ? 'block' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

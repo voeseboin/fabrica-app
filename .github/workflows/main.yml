@@ -1,0 +1,193 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  # Permitir ejecución manual
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # ==========================================
+    # 1. CHECKOUT DEL CÓDIGO
+    # ==========================================
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # ==========================================
+    # 2. CONFIGURAR PYTHON
+    # ==========================================
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    # ==========================================
+    # 3. INSTALAR DEPENDENCIAS
+    # ==========================================
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install buildozer cython
+        pip install flask flask-sqlalchemy fpdf2
+    
+    # ==========================================
+    # 4. INSTALAR DEPENDENCIAS DEL SISTEMA
+    # ==========================================
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          git \
+          zip \
+          unzip \
+          openjdk-17-jdk \
+          autoconf \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake \
+          libffi-dev \
+          libssl-dev \
+          automake
+    
+    # ==========================================
+    # 5. CONFIGURAR ANDROID SDK/NDK
+    # ==========================================
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 9477386
+        packages: 'platform-tools platforms;android-33 build-tools;33.0.0 ndk;25.1.8937393'
+    
+    # ==========================================
+    # 6. CACHE PARA BUILDOZER
+    # ==========================================
+    - name: Cache buildozer
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.buildozer
+          .buildozer
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          ${{ runner.os }}-buildozer-
+    
+    # ==========================================
+    # 7. INICIALIZAR BASE DE DATOS
+    # ==========================================
+    - name: Initialize database
+      run: |
+        mkdir -p database
+        python -c "
+from app import app, db
+with app.app_context():
+    db.create_all()
+    print('Database initialized')
+"
+    
+    # ==========================================
+    # 8. CONSTRUIR APK CON BUILDOZER
+    # ==========================================
+    - name: Build APK with Buildozer
+      run: |
+        buildozer android debug
+      env:
+        ANDROIDSDK: ${{ env.ANDROID_SDK_ROOT }}
+        ANDROIDNDK: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.1.8937393
+        ANDROIDAPI: 33
+        ANDROIDMINAPI: 21
+    
+    # ==========================================
+    # 9. SUBIR APK COMO ARTIFACT
+    # ==========================================
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Fábrica-App-APK
+        path: bin/*.apk
+        retention-days: 30
+    
+    # ==========================================
+    # 10. CREAR RELEASE (opcional - solo en main)
+    # ==========================================
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        body: |
+          ## Fábrica App - Versión ${{ github.run_number }}
+          
+          ### Cambios incluidos:
+          - Commit: ${{ github.sha }}
+          - Fecha: ${{ github.event.head_commit.timestamp }}
+          
+          ### Descargas:
+          - APK disponible en los artifacts de esta ejecución
+          
+          ### Instalación:
+          1. Descarga el archivo APK
+          2. Transfiérelo a tu dispositivo Android
+          3. Habilita "Orígenes desconocidos" en Configuración > Seguridad
+          4. Instala el APK
+        files: bin/*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================================
+  # JOB PARA PROBAR LA APLICACIÓN (TEST)
+  # ==========================================
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flask flask-sqlalchemy fpdf2 pytest
+    
+    - name: Run tests
+      run: |
+        python -c "
+from app import app, db
+with app.app_context():
+    db.create_all()
+    print('✓ Database created successfully')
+    
+    # Test basic routes
+    client = app.test_client()
+    
+    response = client.get('/')
+    assert response.status_code == 200, 'Home page failed'
+    print('✓ Home page accessible')
+    
+    response = client.get('/api/dashboard')
+    assert response.status_code == 200, 'API dashboard failed'
+    print('✓ API dashboard accessible')
+    
+    response = client.get('/api/productos')
+    assert response.status_code == 200, 'API productos failed'
+    print('✓ API productos accessible')
+    
+    print('\\n✓ All tests passed!')
+"
