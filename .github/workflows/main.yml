@@ -4,14 +4,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    - run: sudo apt update && sudo apt install -y openjdk-17-jdk python3-pip
-    - run: pip install buildozer Cython
-    - run: buildozer android debug
-    - uses: actions/upload-artifact@v3
-      with:
-        name: fabrica-app
-        path: bin/*.apk
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: sudo apt update && sudo apt install -y openjdk-17-jdk python3-pip
+      - run: pip install buildozer Cython
+      - run: buildozer android debug
+      - uses: actions/upload-artifact@v4  # <-- CAMBIAR v3 por v4
+        with:
+          name: fabrica-app
+          path: bin/*.apk
